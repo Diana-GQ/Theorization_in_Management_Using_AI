@@ -1,7 +1,7 @@
 import argparse
 import logging
-import pandas as pd
 
+import pandas as pd
 from transformers import pipeline
 
 logging.basicConfig(level=logging.DEBUG, 
@@ -17,7 +17,16 @@ logging.basicConfig(level=logging.DEBUG,
 #
 # Paper: XLM-T: A Multilingual Language Model Toolkit for Twitter
 # https://arxiv.org/pdf/2104.12250.pdf
-def add_sentiment(df_posts):
+def add_sentiment(df_posts: pd.DataFrame) -> pd.DataFrame:
+    """
+    Adds sentiment analysis to a DataFrame of posts.
+
+    Args:
+        df_posts (pd.DataFrame): DataFrame containing posts with a 'text' column.
+
+    Returns:
+        pd.DataFrame: DataFrame with added 'sentiment' and 'sentiment_score' columns.
+    """
     model_path = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
     sentiment_task = pipeline(
         "sentiment-analysis",

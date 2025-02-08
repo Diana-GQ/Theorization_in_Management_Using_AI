@@ -2,15 +2,16 @@ import argparse
 import json
 import logging
 import os
+import random
+
 import openai
 import pandas as pd
-import random
 import tiktoken
+from pydantic import BaseModel
+from tqdm.auto import tqdm
 
 from constants import *
 from openai import OpenAI
-from pydantic import BaseModel
-from tqdm.auto import tqdm
 
 openai.api_key = os.environ["OPENAI_API_KEY"]
 client = OpenAI()
@@ -27,7 +28,16 @@ class TopicList(BaseModel):
     topics: list[Topic]
 
 
-def get_prompt(docs):
+def get_prompt(docs: list[str]) -> list[dict]:
+    """
+    Generates a prompt for the GPT model to identify topics in social media posts.
+
+    Args:
+        docs (list[str]): List of social media posts.
+
+    Returns:
+        list[dict]: List of messages for the GPT model.
+    """
     delimiter = '###'
     system_message = '''
         You're a helpful assistant. Your task is to analyse social media posts.
@@ -36,7 +46,7 @@ def get_prompt(docs):
         Below is a representative set of posts delimited with {delimiter}. 
         Please identify the ten most mentioned topics in these comments.
         The topics must be mutually exclusive.
-        A concise description mist be provided for each topic.
+        A concise description must be provided for each topic.
         The results must be in English.
 
         Social media posts:
@@ -53,35 +63,48 @@ def get_prompt(docs):
     return messages
 
 
-def generate_sublists(input_list, limit):
-    # Initialize an empty list to hold the result
+def generate_sublists(input_list: list[int], limit: int) -> list[list[int]]:
+    """
+    Generates sublists of indices where the sum of lengths does not exceed the limit.
+
+    Args:
+        input_list (list[int]): List of lengths of social media posts.
+        limit (int): Token limit for the GPT model.
+
+    Returns:
+        list[list[int]]: List of sublists of indices.
+    """
     result = []
-    # Initialize an empty sublist to accumulate indices
     current_sublist = []
-    current_sum = 0  # This will keep track of the current sum
+    current_sum = 0
     
     random.shuffle(input_list)
     for idx, num in enumerate(input_list):
-        # If adding the current number exceeds the limit
         if current_sum + num > limit:
-            # Append the current sublist to the result
             result.append(current_sublist)
-            # Start a new sublist with the current index
             current_sublist = [idx]
-            current_sum = num  # Reset the sum to the current number
+            current_sum = num
         else:
-            # Otherwise, add the current index to the sublist
             current_sublist.append(idx)
-            current_sum += num  # Add the number to the current sum
+            current_sum += num
     
-    # Append the last sublist to the result (if not empty)
     if current_sublist:
         result.append(current_sublist)
     
     return result
 
 
-def reduce_topics(df, model=GPT_MODEL):
+def reduce_topics(df: pd.DataFrame, model: str = GPT_MODEL) -> pd.DataFrame:
+    """
+    Reduces the list of topics to up to ten by removing duplicates.
+
+    Args:
+        df (pd.DataFrame): DataFrame containing topics and their descriptions.
+        model (str): The GPT model to use for reducing topics.
+
+    Returns:
+        pd.DataFrame: DataFrame with reduced topics.
+    """
     system_message = '''
         You're a helpful assistant. Your task is to analyse social media posts.
     '''
@@ -116,7 +139,18 @@ def reduce_topics(df, model=GPT_MODEL):
     return df
 
 
-def generate_gpt_topics(df, model=GPT_MODEL, token_limit=GPT_TOKEN_LIMIT):
+def generate_gpt_topics(df: pd.DataFrame, model: str = GPT_MODEL, token_limit: int = GPT_TOKEN_LIMIT) -> pd.DataFrame:
+    """
+    Generates GPT topics for a DataFrame of posts.
+
+    Args:
+        df (pd.DataFrame): DataFrame containing posts with a 'text' column.
+        model (str): The GPT model to use for generating topics.
+        token_limit (int): Token limit for the GPT model.
+
+    Returns:
+        pd.DataFrame: DataFrame with generated topics.
+    """
     gpt_enc = tiktoken.encoding_for_model(GPT_MODEL_ENCODING)
     docs = df.text
     lengths = [len(gpt_enc.encode(x)) for x in docs]
@@ -147,7 +181,17 @@ def generate_gpt_topics(df, model=GPT_MODEL, token_limit=GPT_TOKEN_LIMIT):
     return df_topics_all
 
 
-def get_prompt_topic_mapping(doc, topic_list):
+def get_prompt_topic_mapping(doc: str, topic_list: str) -> list[dict]:
+    """
+    Generates a prompt for the GPT model to map topics to a social media post.
+
+    Args:
+        doc (str): Social media post.
+        topic_list (str): List of topics.
+
+    Returns:
+        list[dict]: List of messages for the GPT model.
+    """
     delimiter = '###'
     system_message = '''
         You're a helpful assistant. Your task is to analyse social media posts.
@@ -180,7 +224,17 @@ def get_prompt_topic_mapping(doc, topic_list):
     return messages
 
 
-def get_model_response(messages, model=GPT_MODEL):
+def get_model_response(messages: list[dict], model: str = GPT_MODEL) -> str:
+    """
+    Gets the response from the GPT model for the given messages.
+
+    Args:
+        messages (list[dict]): List of messages for the GPT model.
+        model (str): The GPT model to use.
+
+    Returns:
+        str: The response from the GPT model.
+    """
     result = client.chat.completions.create(
         model=model,
         messages=messages
@@ -189,7 +243,17 @@ def get_model_response(messages, model=GPT_MODEL):
     return result.choices[0].message.content
 
 
-def assign_topics(df_posts, df_topics):
+def assign_topics(df_posts: pd.DataFrame, df_topics: pd.DataFrame) -> pd.DataFrame:
+    """
+    Assigns topics to a DataFrame of posts.
+
+    Args:
+        df_posts (pd.DataFrame): DataFrame containing posts with a 'text' column.
+        df_topics (pd.DataFrame): DataFrame containing topics.
+
+    Returns:
+        pd.DataFrame: DataFrame with assigned topics.
+    """
     topic_list = '\n'.join(df_topics.name)
     docs = df_posts.text
     for doc in tqdm(docs):
@@ -197,13 +261,22 @@ def assign_topics(df_posts, df_topics):
         topics = get_model_response(messages)
         topics = [f'gpt_topic: {t.lstrip()}' for t in topics.split(',')]
         for t in topics:
-            df_posts.loc[df_posts['text']==doc,t] = 1
+            df_posts.loc[df_posts['text'] == doc, t] = 1
     df_posts.fillna(0, inplace=True)
 
     return df_posts
 
 
-def add_gpt_topics(df_posts):
+def add_gpt_topics(df_posts: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Adds GPT topics to a DataFrame of posts.
+
+    Args:
+        df_posts (pd.DataFrame): DataFrame containing posts with a 'text' column.
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame]: DataFrame with added GPT topics and DataFrame with the list of GPT topics.
+    """
     df_topics = generate_gpt_topics(df_posts)
     df_posts = assign_topics(df_posts, df_topics)
 
