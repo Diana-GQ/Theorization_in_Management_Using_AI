@@ -11,8 +11,9 @@ from openai import OpenAI
 
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
-logging.basicConfig(level=logging.DEBUG, 
-                    format='[%(levelname)s] %(asctime)s - %(message)s')
+logging.basicConfig(
+    level=logging.DEBUG, format="[%(levelname)s] %(asctime)s - %(message)s"
+)
 
 
 def get_embedding(text: str, client: OpenAI, model: str = ADA_EMBEDDING_MODEL) -> list:
@@ -27,11 +28,13 @@ def get_embedding(text: str, client: OpenAI, model: str = ADA_EMBEDDING_MODEL) -
     Returns:
         list: The generated embedding.
     """
-    text = text.replace('\n', ' ')
+    text = text.replace("\n", " ")
     return client.embeddings.create(input=[text], model=model).data[0].embedding
 
 
-def retrieve_similar_entries(df: pd.DataFrame, query_embedding: list, top_n: int) -> pd.DataFrame:
+def retrieve_similar_entries(
+    df: pd.DataFrame, query_embedding: list, top_n: int
+) -> pd.DataFrame:
     """
     Retrieves the top N entries in the DataFrame with the highest cosine similarity to the query embedding.
 
@@ -43,8 +46,10 @@ def retrieve_similar_entries(df: pd.DataFrame, query_embedding: list, top_n: int
     Returns:
         pd.DataFrame: DataFrame with the top N similar entries.
     """
-    df['similarity'] = df['ada_embedding'].apply(lambda x: cosine_similarity([x], [query_embedding])[0][0])
-    return df.nlargest(top_n, 'similarity')
+    df["similarity"] = df["ada_embedding"].apply(
+        lambda x: cosine_similarity([x], [query_embedding])[0][0]
+    )
+    return df.nlargest(top_n, "similarity")
 
 
 def main():
@@ -55,21 +60,21 @@ def main():
         default=None,
         type=str,
         required=True,
-        help="Name of parquet file with processed posts."
+        help="Name of parquet file with processed posts.",
     )
     parser.add_argument(
         "--query",
         default=None,
         type=str,
         required=True,
-        help="Query string to find similar posts."
+        help="Query string to find similar posts.",
     )
     parser.add_argument(
         "--top_n",
         default=5,
         type=int,
         required=False,
-        help="Number of top similar posts to retrieve."
+        help="Number of top similar posts to retrieve.",
     )
     args = parser.parse_args()
 

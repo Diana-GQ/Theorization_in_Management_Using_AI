@@ -16,13 +16,15 @@ from openai import OpenAI
 openai.api_key = os.environ["OPENAI_API_KEY"]
 client = OpenAI()
 
-logging.basicConfig(level=logging.DEBUG, 
-                    format='[%(levelname)s] %(asctime)s - %(message)s')
+logging.basicConfig(
+    level=logging.DEBUG, format="[%(levelname)s] %(asctime)s - %(message)s"
+)
 
 
 class Topic(BaseModel):
     name: str
     description: str
+
 
 class TopicList(BaseModel):
     topics: list[Topic]
@@ -38,11 +40,11 @@ def get_prompt(docs: list[str]) -> list[dict]:
     Returns:
         list[dict]: List of messages for the GPT model.
     """
-    delimiter = '###'
-    system_message = '''
+    delimiter = "###"
+    system_message = """
         You're a helpful assistant. Your task is to analyse social media posts.
-    '''
-    user_message = f'''
+    """
+    user_message = f"""
         Below is a representative set of posts delimited with {delimiter}. 
         Please identify the ten most mentioned topics in these comments.
         The topics must be mutually exclusive.
@@ -53,12 +55,10 @@ def get_prompt(docs: list[str]) -> list[dict]:
         {delimiter}
         {delimiter.join(docs)}
         {delimiter}
-    '''
-    messages =  [  
-        {'role':'system', 
-         'content': system_message},    
-        {'role':'user', 
-         'content': f"{user_message}"},  
+    """
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": f"{user_message}"},
     ]
     return messages
 
@@ -77,7 +77,7 @@ def generate_sublists(input_list: list[int], limit: int) -> list[list[int]]:
     result = []
     current_sublist = []
     current_sum = 0
-    
+
     random.shuffle(input_list)
     for idx, num in enumerate(input_list):
         if current_sum + num > limit:
@@ -87,10 +87,10 @@ def generate_sublists(input_list: list[int], limit: int) -> list[list[int]]:
         else:
             current_sublist.append(idx)
             current_sum += num
-    
+
     if current_sublist:
         result.append(current_sublist)
-    
+
     return result
 
 
@@ -105,41 +105,37 @@ def reduce_topics(df: pd.DataFrame, model: str = GPT_MODEL) -> pd.DataFrame:
     Returns:
         pd.DataFrame: DataFrame with reduced topics.
     """
-    system_message = '''
+    system_message = """
         You're a helpful assistant. Your task is to analyse social media posts.
-    '''
-    user_message = f'''
+    """
+    user_message = f"""
         Below is a set of topics and their descriptions. 
         Reduce the list to up to ten topics by removing duplicated topics.
 
         Topics:
         {df.to_json(orient='records')}
-    '''
-    messages =  [  
-        {'role':'system', 
-        'content': system_message},    
-        {'role':'user', 
-        'content': f"{user_message}"},  
+    """
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": f"{user_message}"},
     ]
     result = client.chat.completions.create(
         model=model,
         messages=messages,
         response_format={
-            'type': 'json_schema',
-            'json_schema': 
-                {
-                    "name":"whocares", 
-                    "schema": TopicList.schema()
-                }
-            },
+            "type": "json_schema",
+            "json_schema": {"name": "whocares", "schema": TopicList.schema()},
+        },
     )
-    topics = json.loads(result.choices[0].message.content).get('topics', [])
+    topics = json.loads(result.choices[0].message.content).get("topics", [])
     df = pd.DataFrame(topics)
 
     return df
 
 
-def generate_gpt_topics(df: pd.DataFrame, model: str = GPT_MODEL, token_limit: int = GPT_TOKEN_LIMIT) -> pd.DataFrame:
+def generate_gpt_topics(
+    df: pd.DataFrame, model: str = GPT_MODEL, token_limit: int = GPT_TOKEN_LIMIT
+) -> pd.DataFrame:
     """
     Generates GPT topics for a DataFrame of posts.
 
@@ -164,15 +160,11 @@ def generate_gpt_topics(df: pd.DataFrame, model: str = GPT_MODEL, token_limit: i
             model=model,
             messages=messages,
             response_format={
-                'type': 'json_schema',
-                'json_schema': 
-                    {
-                        "name":"whocares", 
-                        "schema": TopicList.schema()
-                    }
-                },
+                "type": "json_schema",
+                "json_schema": {"name": "whocares", "schema": TopicList.schema()},
+            },
         )
-        topics = json.loads(result.choices[0].message.content).get('topics', [])
+        topics = json.loads(result.choices[0].message.content).get("topics", [])
         df_topics = pd.DataFrame(topics)
         df_topics_all = pd.concat([df_topics_all, df_topics])
 
@@ -192,11 +184,11 @@ def get_prompt_topic_mapping(doc: str, topic_list: str) -> list[dict]:
     Returns:
         list[dict]: List of messages for the GPT model.
     """
-    delimiter = '###'
-    system_message = '''
+    delimiter = "###"
+    system_message = """
         You're a helpful assistant. Your task is to analyse social media posts.
-    '''
-    user_message = f'''
+    """
+    user_message = f"""
         Below is a social media post delimited with {delimiter}. 
         Please, identify the main topics mentioned in this post from the list of topics below. 
 
@@ -213,12 +205,10 @@ def get_prompt_topic_mapping(doc: str, topic_list: str) -> list[dict]:
         {delimiter}
         {doc}
         {delimiter}
-    '''
-    messages =  [  
-        {'role':'system', 
-         'content': system_message},    
-        {'role':'user', 
-         'content': f"{user_message}"},  
+    """
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": f"{user_message}"},
     ]
 
     return messages
@@ -235,10 +225,7 @@ def get_model_response(messages: list[dict], model: str = GPT_MODEL) -> str:
     Returns:
         str: The response from the GPT model.
     """
-    result = client.chat.completions.create(
-        model=model,
-        messages=messages
-    )
+    result = client.chat.completions.create(model=model, messages=messages)
 
     return result.choices[0].message.content
 
@@ -254,14 +241,14 @@ def assign_topics(df_posts: pd.DataFrame, df_topics: pd.DataFrame) -> pd.DataFra
     Returns:
         pd.DataFrame: DataFrame with assigned topics.
     """
-    topic_list = '\n'.join(df_topics.name)
+    topic_list = "\n".join(df_topics.name)
     docs = df_posts.text
     for doc in tqdm(docs):
         messages = get_prompt_topic_mapping(doc, topic_list)
         topics = get_model_response(messages)
-        topics = [f'gpt_topic: {t.lstrip()}' for t in topics.split(',')]
+        topics = [f"gpt_topic: {t.lstrip()}" for t in topics.split(",")]
         for t in topics:
-            df_posts.loc[df_posts['text'] == doc, t] = 1
+            df_posts.loc[df_posts["text"] == doc, t] = 1
     df_posts.fillna(0, inplace=True)
 
     return df_posts
@@ -291,21 +278,21 @@ def main():
         default=None,
         type=str,
         required=True,
-        help="Name of parquet file with processed posts."
+        help="Name of parquet file with processed posts.",
     )
     parser.add_argument(
         "--output_file_name",
         default=None,
         type=str,
         required=True,
-        help="Name of parquet file with GPT topics added to posts."
+        help="Name of parquet file with GPT topics added to posts.",
     )
     parser.add_argument(
         "--topics_file_name",
         default="gpt_topics.parquet",
         type=str,
         required=False,
-        help="Name of output parquet file with the list of GPT topics."
+        help="Name of output parquet file with the list of GPT topics.",
     )
     args = parser.parse_args()
 

@@ -4,8 +4,9 @@ import logging
 import pandas as pd
 from transformers import pipeline
 
-logging.basicConfig(level=logging.DEBUG, 
-                    format='[%(levelname)s] %(asctime)s - %(message)s')
+logging.basicConfig(
+    level=logging.DEBUG, format="[%(levelname)s] %(asctime)s - %(message)s"
+)
 
 
 # From https://huggingface.co/cardiffnlp/twitter-xlm-roberta-base-sentiment
@@ -33,11 +34,13 @@ def add_sentiment(df_posts: pd.DataFrame) -> pd.DataFrame:
         model=model_path,
         tokenizer=model_path,
         # Set max_length since FB posts can be longer than tweets
-        truncation=True, max_length=512, add_special_tokens = True
+        truncation=True,
+        max_length=512,
+        add_special_tokens=True,
     )
-    sa = sentiment_task([str(x) for x in df_posts['text']])
-    df_posts['sentiment'] = [x['label'] for x in sa]
-    df_posts['sentiment_score'] = [x['score'] for x in sa]
+    sa = sentiment_task([str(x) for x in df_posts["text"]])
+    df_posts["sentiment"] = [x["label"] for x in sa]
+    df_posts["sentiment_score"] = [x["score"] for x in sa]
 
     return df_posts
 
@@ -50,14 +53,14 @@ def main():
         default=None,
         type=str,
         required=True,
-        help="Name of parquet file with processed posts."
+        help="Name of parquet file with processed posts.",
     )
     parser.add_argument(
         "--output_file_name",
         default=None,
         type=str,
         required=True,
-        help="Name of parquet file with sentiment added to posts."
+        help="Name of parquet file with sentiment added to posts.",
     )
     args = parser.parse_args()
 

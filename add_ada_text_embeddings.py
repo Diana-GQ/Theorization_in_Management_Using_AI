@@ -5,13 +5,14 @@ import os
 import openai
 import pandas as pd
 
-from constants import *
+from constants import ADA_EMBEDDING_MODEL
 from openai import OpenAI
 
 openai.api_key = os.environ["OPENAI_API_KEY"]
 
-logging.basicConfig(level=logging.DEBUG, 
-                    format='[%(levelname)s] %(asctime)s - %(message)s')
+logging.basicConfig(
+    level=logging.DEBUG, format="[%(levelname)s] %(asctime)s - %(message)s"
+)
 
 
 def get_embedding(text: str, client: OpenAI, model: str = ADA_EMBEDDING_MODEL) -> list:
@@ -26,7 +27,7 @@ def get_embedding(text: str, client: OpenAI, model: str = ADA_EMBEDDING_MODEL) -
     Returns:
         list: The generated embedding.
     """
-    text = text.replace('\n', ' ')
+    text = text.replace("\n", " ")
     return client.embeddings.create(input=[text], model=model).data[0].embedding
 
 
@@ -42,7 +43,9 @@ def add_ada_embeddings(df_posts: pd.DataFrame) -> pd.DataFrame:
     """
     client = OpenAI()
 
-    df_posts['ada_embedding'] = df_posts['text'].apply(lambda x: get_embedding(x, client))
+    df_posts["ada_embedding"] = df_posts["text"].apply(
+        lambda x: get_embedding(x, client)
+    )
     return df_posts
 
 
@@ -54,14 +57,14 @@ def main():
         default=None,
         type=str,
         required=True,
-        help="Name of parquet file with processed posts."
+        help="Name of parquet file with processed posts.",
     )
     parser.add_argument(
         "--output_file_name",
         default=None,
         type=str,
         required=True,
-        help="Name of parquet file with ada embeddings added to posts."
+        help="Name of parquet file with ada embeddings added to posts.",
     )
     args = parser.parse_args()
 
