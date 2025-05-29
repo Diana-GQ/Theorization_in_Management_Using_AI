@@ -1,6 +1,6 @@
 # Theorization in Management using AI
 Applying LLMs to select relevant data for qualitative analysis in management research.
-This repository contains the code for the paper "Enhancing Theorization Using Artificial Inteligence: Leveraging Large Language Models for Qualitative Analysis of Online Data" by Garcia Quevedo _et al._
+This repository contains the code for the paper "Enhancing Theorization Using Artificial Inteligence: Leveraging Large Language Models for Qualitative Analysis of Online Data" by Garcia Quevedo _et al. (2025)_
 
 ## Introduction
 
